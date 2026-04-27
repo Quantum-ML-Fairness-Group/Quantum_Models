@@ -1,0 +1,8 @@
+dataset,model,encoding,noise,fairness_metric,resolved_attribute,input_dim,n_qubits,n_layers,epochs,n_train,n_val,n_test,train_time_s,accuracy,demographic_parity_difference
+compas,VQC,angle,none,demographic_parity_difference,race,9,6,3,20,300,300,1000,240.66489219665527,0.5860000252723694,0.12016583979129791
+adult,VQC,angle,none,demographic_parity_difference,race,96,6,3,20,300,300,1000,226.8369598388672,0.8059999942779541,0.028799235820770264
+diabetes_prediction,VQC,angle,none,demographic_parity_difference,sex,12,6,3,20,300,300,1000,229.45050597190857,0.906000018119812,0.03197009861469269
+cardiovascular,VQC,angle,none,demographic_parity_difference,sex,10,6,3,20,300,300,1000,206.42870092391968,0.5590000152587891,0.009890109300613403
+heart_indicators,VQC,angle,none,demographic_parity_difference,sex,48,6,3,20,300,300,1000,190.5259449481964,0.7699999809265137,0.03514032065868378
+diabetes_hospital,VQC,angle,none,demographic_parity_difference,race,2464,6,3,20,300,300,1000,196.88610005378723,0.46799999475479126,0.010771572589874268
+glioma,VQC,angle,none,demographic_parity_difference,race,22,6,3,20,300,84,168,148.50139784812927,0.726190447807312,0.13202613592147827
