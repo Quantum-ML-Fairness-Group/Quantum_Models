@@ -39,18 +39,18 @@ from train import train_model
 
 
 ROOT = Path(__file__).resolve().parent
-WORKSPACE_ROOT = ROOT.parent
+PROJECT_ROOT = ROOT.parent
+WORKSPACE_ROOT = PROJECT_ROOT.parent
 QML_BIAS_AUDIT_ROOT = WORKSPACE_ROOT / "qml-bias-audit"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 if QML_BIAS_AUDIT_ROOT.exists():
     sys.path.insert(0, str(QML_BIAS_AUDIT_ROOT))
 
 from data.registry import get_dataset_loader, list_datasets  # noqa: E402
 
 
-RESULTS_DIR = ROOT / "results"
-FIGURES_DIR = ROOT / "figures"
-RESULTS_DIR.mkdir(exist_ok=True)
-FIGURES_DIR.mkdir(exist_ok=True)
+DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "dataset_variability_vqc_angle_runs"
 
 
 @dataclass
@@ -206,7 +206,7 @@ def bundle_from_splits(args: argparse.Namespace, dataset: str, splits: dict) -> 
 
 def load_dataset_bundle(args: argparse.Namespace, dataset: str) -> DatasetBundle:
     if dataset == "compas":
-        compas_csv = ROOT / "compas-scores-two-years.csv"
+        compas_csv = PROJECT_ROOT / "compas-scores-two-years.csv"
         bundle = make_compas_dataloaders(
             str(compas_csv),
             batch_size=args.batch_size,
@@ -313,7 +313,7 @@ def run_one_dataset(args: argparse.Namespace, dataset: str) -> dict:
     }
 
 
-def save_plot(df: pd.DataFrame) -> Path:
+def save_plot(df: pd.DataFrame, figures_dir: Path) -> Path:
     plot_df = df.sort_values("dataset")
 
     fig, ax = plt.subplots(figsize=(10, 5.2))
@@ -350,7 +350,7 @@ def save_plot(df: pd.DataFrame) -> Path:
     ax.set_ylim(0, ymax)
     plt.tight_layout()
 
-    out = FIGURES_DIR / "dataset_variability_vqc_angle_dpd.png"
+    out = figures_dir / "dataset_variability_vqc_angle_dpd.png"
     fig.savefig(out, dpi=180, bbox_inches="tight")
     fig.savefig(out.with_suffix(".pdf"), dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -362,16 +362,24 @@ def main(args: argparse.Namespace) -> None:
     if unavailable:
         raise ValueError(f"Unknown dataset(s): {unavailable}. Available: {list_datasets()}")
 
+    output_dir = Path(args.output_dir) if args.output_dir else (
+        DEFAULT_OUTPUT_ROOT / time.strftime("run_%Y%m%d_%H%M%S")
+    )
+    results_dir = output_dir / "results"
+    figures_dir = output_dir / "figures"
+    results_dir.mkdir(parents=True, exist_ok=False)
+    figures_dir.mkdir(parents=True, exist_ok=False)
+
     rows = [run_one_dataset(args, dataset) for dataset in args.datasets]
     df = pd.DataFrame(rows)
 
-    csv_path = RESULTS_DIR / "dataset_variability_vqc_angle_dpd.csv"
-    json_path = RESULTS_DIR / "dataset_variability_vqc_angle_dpd.json"
+    csv_path = results_dir / "dataset_variability_vqc_angle_dpd.csv"
+    json_path = results_dir / "dataset_variability_vqc_angle_dpd.json"
     df.to_csv(csv_path, index=False)
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(df.to_dict(orient="records"), f, indent=2)
 
-    fig_path = save_plot(df)
+    fig_path = save_plot(df, figures_dir)
     summary_cols = [
         "dataset",
         "accuracy",
@@ -411,4 +419,12 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--output_dir",
+        default=None,
+        help=(
+            "Directory for this run's outputs. Defaults to a new timestamped "
+            "directory outside dataset_variability_vqc_angle."
+        ),
+    )
     main(parser.parse_args())
