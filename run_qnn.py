@@ -24,7 +24,7 @@ train_model(
     model=model,
     train_loader=bundle.train_loader,
     val_loader=bundle.test_loader,
-    epochs=20,
+    epochs=50,
     lr=1e-3,
 )
 

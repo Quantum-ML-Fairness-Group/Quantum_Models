@@ -26,6 +26,7 @@ class VQC(BaseQuantumModel):
         output_dim: int = 1,
         encoding_fn=None,
         device_fn=None,
+        encoding_name="angle",
     ):
         super().__init__(
             input_dim=input_dim,
@@ -36,6 +37,7 @@ class VQC(BaseQuantumModel):
 
         self.n_layers = n_layers
         self.output_dim = output_dim
+        self.encoding_name = encoding_name
 
         # Define quantum circuit
         @qml.qnode(self.dev, interface="torch")

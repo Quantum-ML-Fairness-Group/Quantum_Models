@@ -5,6 +5,8 @@ import torch
 from fairness import (
     binarize_predictions,
     demographic_parity_difference,
+    equal_opportunity_difference,
+    disparate_impact,
 )
 
 
@@ -85,6 +87,24 @@ def compute_accuracy(
 
     return (y_pred == y_true).float().mean().item()
 
+def compute_group_accuracy(
+    y_pred: torch.Tensor,
+    y_true: torch.Tensor,
+    sensitive: torch.Tensor,
+    group_value: int,
+) -> float:
+    
+    y_pred = y_pred.view(-1).int()
+    y_true = y_true.view(-1).int()
+    sensitive = sensitive.view(-1).int()
+
+    mask = sensitive == group_value
+
+    if mask.sum() == 0:
+        return float("nan")
+    
+    return (y_pred[mask] == y_true[mask]).float().mean().item()
+
 
 @torch.no_grad()
 def evaluate_model(
@@ -113,16 +133,51 @@ def evaluate_model(
         device=device,
     )
 
-    accuracy = compute_accuracy(outputs["preds"], outputs["labels"])
+    y_pred = outputs["preds"]
+    y_true = outputs["labels"]
+    sensitive = outputs["sensitive"]
+
+    accuracy = compute_accuracy(y_pred, y_true)
+
+    group_accuracy_0 = compute_group_accuracy(
+        y_pred=y_pred,
+        y_true=y_true,
+        sensitive=sensitive,
+        group_value=0,
+    )
+
+    group_accuracy_1 = compute_group_accuracy(
+        y_pred=y_pred,
+        y_true=y_true,
+        sensitive=sensitive,
+        group_value=1,
+    )
+
     dpd = demographic_parity_difference(
-        y_pred=outputs["preds"],
-        sensitive=outputs["sensitive"],
+        y_pred=y_pred,
+        sensitive=sensitive,
         absolute=True,
+    ).item()
+
+    eod = equal_opportunity_difference(
+        y_pred=y_pred,
+        y_true=y_true,
+        sensitive=sensitive,
+        absolute=True,
+    ).item()
+
+    di = disparate_impact(
+        y_pred=y_pred,
+        sensitive=sensitive,
     ).item()
 
     return {
         "accuracy": accuracy,
+        "group_accuracy_0": group_accuracy_0,
+        "group_accuracy_1": group_accuracy_1,
         "demographic_parity_difference": dpd,
+        "equal_opportunity_difference": eod,
+        "disparate_impact": di,
     }
 
 

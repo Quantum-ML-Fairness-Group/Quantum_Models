@@ -18,7 +18,6 @@ def binarize_predictions(outputs: torch.Tensor, threshold: float = 0.5) -> torch
         raise ValueError("outputs must have shape (N,) or (N, 1).")
 
     outputs = outputs.view(-1)
-
     probs = torch.sigmoid(outputs)
     preds = (probs >= threshold).int()
 
@@ -81,6 +80,59 @@ def demographic_parity_difference(
         dpd = torch.abs(dpd)
 
     return dpd
+
+def true_positive_rate(
+    y_pred: torch.Tensor,
+    y_true: torch.Tensor,
+    sensitive: torch.Tensor,
+    group_value: int,
+) -> torch.Tensor:
+    y_pred = y_pred.view(-1).int()
+    y_true = y_true.view(-1).int()
+    sensitive = sensitive.view(-1).int()
+
+    mask = (sensitive == group_value) & (y_true == 1)
+
+    if mask.sum() == 0:
+        raise ValueError(
+            f"No positive-label samples found for sensitive group {group_value}."
+        )
+
+    return y_pred[mask].float().mean()
+
+def equal_opportunity_difference(
+    y_pred: torch.Tensor,
+    y_true: torch.Tensor,
+    sensitive: torch.Tensor,
+    absolute: bool = True,
+) -> torch.Tensor:
+    tpr_group_0 = true_positive_rate(
+        y_pred=y_pred,
+        y_true=y_true,
+        sensitive=sensitive,
+        group_value=0,
+    )
+
+    tpr_group_1 = true_positive_rate(
+        y_pred=y_pred,
+        y_true=y_true,
+        sensitive=sensitive,
+        group_value=1,
+    )
+
+    eod = tpr_group_0 - tpr_group_1
+    return torch.abs(eod) if absolute else eod
+
+
+def disparate_impact(
+    y_pred: torch.Tensor,
+    sensitive: torch.Tensor,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    rate_group_0 = positive_prediction_rate(y_pred, sensitive, group_value=0)
+    rate_group_1 = positive_prediction_rate(y_pred, sensitive, group_value=1)
+
+    return rate_group_1 / (rate_group_0 + eps)
 
 
 def demographic_parity_from_logits(
