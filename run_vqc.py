@@ -5,6 +5,7 @@ from evaluate import evaluate_model
 from utils import save_results_to_csv
 from quantum_encodings import ENCODINGS
 import torch
+import os
 
 # Load dataset
 bundle = make_compas_dataloaders(

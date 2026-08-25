@@ -3,6 +3,8 @@ from model_architectures.ccqc import CCQC
 from train import train_model
 from evaluate import evaluate_model
 from utils import save_results_to_csv
+import os
+import torch
 
 # Load data
 bundle = make_compas_dataloaders(
@@ -10,11 +12,13 @@ bundle = make_compas_dataloaders(
     batch_size=32,
 )
 
+os.makedirs("saved_models", exist_ok=True)
+
 # Create model
 model = CCQC(
     input_dim=bundle.input_dim,
     n_qubits=6,
-    n_layers=3,
+    n_layers=2,
     output_dim=1,
     readout_qubit=0,
 )
@@ -26,6 +30,11 @@ train_model(
     val_loader=bundle.test_loader,
     epochs=50,
     lr=1e-3,
+)
+
+torch.save(
+    model.state_dict(),
+    "saved_models/compas_ccqc.pth"
 )
 
 # Evaluate
@@ -42,5 +51,9 @@ save_results_to_csv(
     file_path="results.csv",
     model_name="CCQC",
     accuracy=results["accuracy"],
+    group_accuracy_0=results["group_accuracy_0"],
+    group_accuracy_1=results["group_accuracy_1"],
     dpd=results["demographic_parity_difference"],
+    eod=results["equal_opportunity_difference"],
+    di=results["disparate_impact"],
 )
